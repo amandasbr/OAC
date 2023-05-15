@@ -3,12 +3,16 @@
 // Modified By Amanda Reis on 14/05/2023
 //
 #include "RV_header.h"
-#include "riscv.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+//
+//Memória
+//
+int32_t mem[MEM_SIZE];
 
+char stop_prg;
 //
 // Initial values for registers
 //
@@ -53,28 +57,44 @@ void decode() {
     imm21 = set_field(imm21, 1, 0x3FF, tmp);
     imm21 = imm21 & ~1;                    // zero bit 0
     ins_code = get_instr_code(opcode, funct3, funct7);
-    imm32 = get_imm32(get_i_format(opcode, funct3, funct7));
 }
 
-int load_mem(const char *fn, int start) {
-    FILE *fptr;
-    int *m_ptr = mem + (start >> 2);
+int load_mem(const char *codeFile, const char *dataFile) {
+    FILE *codeFilePtr, *dataFilePtr;
+    int *memoryPtr = mem + (CODE_SEGMENT_START >> 2);
     int size = 0;
 
-    fptr = fopen(fn, "rb");
-    if (!fptr) {
+    codeFilePtr = fopen(codeFile, "rb");
+    if(!codeFilePtr){
         printf("Arquivo nao encontrado!");
         return -1;
-    } else {
-        while (!feof(fptr)) {
-            fread(m_ptr, 4, 1, fptr);
-            m_ptr++;
+    }
+    else{
+        while (!feof(codeFilePtr)){
+            fread(memoryPtr, 4, 1, codeFilePtr);
+            memoryPtr++;
             size++;
         }
-        fclose(fptr);
+        fclose(codeFilePtr);
+    }
+
+    memoryPtr = mem + (DATA_SEGMENT_START >> 2);
+    dataFilePtr = fopen(dataFile, "rb");
+    if(!dataFilePtr){
+        printf("Arquivo nao encontrado!");
+        return -1;
+    }
+    else{
+        while (!feof(dataFilePtr)){
+            fread(memoryPtr, 4, 1, dataFilePtr);
+            memoryPtr++;
+            size++;
+        }
+        fclose(dataFilePtr);
     }
     return size;
 }
+
 
 int32_t get_imm32(enum FORMATS iformat) {
     switch (iformat) {
@@ -88,7 +108,7 @@ int32_t get_imm32(enum FORMATS iformat) {
     }
 }
 
-enum FORMATS get_i_format(uint32_t opcode, uint32_t func3, uint32_t func7) {
+enum FORMATS get_i_format(uint32_t opcode, uint32_t funct3, uint32_t funct7) {
     switch (opcode) {
         case 0x33 :
             return RType;
@@ -107,7 +127,7 @@ enum FORMATS get_i_format(uint32_t opcode, uint32_t func3, uint32_t func7) {
         case 0x17 :
             return UJType;
         case 0x00:
-            if (func3 == 0 && func7 == 0)
+            if (funct3 == 0 && funct7 == 0)
                 return NOPType;
             else
                 return NullFormat;
@@ -116,6 +136,115 @@ enum FORMATS get_i_format(uint32_t opcode, uint32_t func3, uint32_t func7) {
             return NullFormat;
     }
 }
+
+enum INSTRUCTIONS get_instr_code(uint32_t opcode, uint32_t funct3, uint32_t funct7) {
+    switch (opcode) {
+        case LUI:
+            return I_lui;
+        case AUIPC:
+            return I_auipc;
+        case BType:
+            switch (funct3) {
+                case BEQ3:
+                    return I_beq;
+                case BNE3:
+                    return I_bne;
+                case BLT3:
+                    return I_blt;
+                case BGE3:
+                    return I_bge;
+                case BLTU3:
+                    return I_bltu;
+                case BGEU3:
+                    return I_bgeu;
+            }
+            break;
+        case ILType:
+            switch (funct3) {
+                case LB3:
+                    return I_lb;
+                case LH3:
+                    return I_lh;
+                case LW3:
+                    return I_lw;
+                case LBU3:
+                    return I_lbu;
+                default:
+                    break;
+            }
+            break;
+        case JAL:
+            return I_jal;
+        case JALR:
+            return I_jalr;
+        case StoreType:
+            switch (funct3) {
+                case SB3:
+                    return I_sb;
+                case SH3:
+                    return I_sh;
+                case SW3:
+                    return I_sw;
+                default:
+                    break;
+            }
+            break;
+        case ILAType:
+            switch (funct3) {
+                case ADDI3:
+                    return I_addi;
+                case ORI3:
+                    return I_ori;
+                case ANDI3:
+                    return I_andi;
+                case XORI3:
+                    return I_xori;
+                case SLTI3:
+                    return I_slti;
+                case SLTIU3:
+                    return I_sltiu;
+                case SLLI3:
+                    return I_slli;
+                case SRI3:
+                    if (funct7 == SRLI7) return I_srli;
+                    else return I_srai;
+                default:
+                    break;
+            }
+            break;
+        case RegType:
+            switch (funct3) {
+                case ADDSUB3:
+                    if (funct7 == SUB7) return I_sub;
+                    else return I_add;
+                case SLL3:
+                    return I_sll;
+                case SLT3:
+                    return I_slt;
+                case SLTU3:
+                    return I_sltu;
+                case XOR3:
+                    return I_xor;
+                case OR3:
+                    return I_or;
+                case AND3:
+                    return I_and;
+                case SR3:
+                    if (funct7 == SRA7) return I_sra;
+                    else return I_srl;
+                default:
+                    break;
+            }
+            break;
+        case ECALL:
+            return I_ecall;
+        default:
+            printf("\n\nInstrucao Invalida (PC = %08x RI = %08x)\n", pc, ri);
+            break;
+    }
+    return I_nop;
+}
+
 
 
 /*Amanda Soares Bispo Reis
@@ -170,13 +299,13 @@ void execute(){
             return jalr();
       
         case I_sb:
-            breg[rd] = sb(get_imm32(get_i_format(opcode, funct3, funct7)), breg[rs1]);
+            sb(breg[rs1],get_imm32(get_i_format(opcode, funct3, funct7)), breg[rs1]);
             return;
         case I_sh:
-            breg[rd] = sb(get_imm32(get_i_format(opcode, funct3, funct7)), breg[rs1]);
+            sb(breg[rs1],get_imm32(get_i_format(opcode, funct3, funct7)), breg[rs1]);
             return;
         case I_sw:
-            breg[rd] = sw(get_imm32(get_i_format(opcode, funct3, funct7)), breg[rs1]);
+            sw(breg[rs1],get_imm32(get_i_format(opcode, funct3, funct7)), breg[rs1]);
             return;
 
         case I_addi:
@@ -245,48 +374,48 @@ void run(){
 }
 
 void add(){
-    beq[rd]=beq[rs2]+beq[rs1];
+    breg[rd]=breg[rs2]+breg[rs1];
 }
 void addi(){
-    beq[rd]=beq[rs1] + get_imm32(get_i_format(opcode, func3, func7)); 
+    breg[rd]=breg[rs1] + get_imm32(get_i_format(opcode, funct3, funct7)); 
 }
 void and(){
-    beq[rd]=beq[rs1] & beq[rs2];
+    breg[rd]=breg[rs1] & breg[rs2];
 }
 void andi(){
-    beq[rd]=beq[rs1] & get_imm32(get_i_format(opcode, func3, func7));
+    breg[rd]=breg[rs1] & get_imm32(get_i_format(opcode, funct3, funct7));
 }
 void auipc(){
-    beq[rd]= pc + get_imm32(get_i_format(opcode, func3, func7))-4;
+    breg[rd]= pc + get_imm32(get_i_format(opcode, funct3, funct7))-4;
 }
 void beq(){
-    if(beq[rs1]==beq[rs2]){
-        pc+= get_imm32(get_i_format(opcode, func3, func7))-4;
+    if(breg[rs1]==breg[rs2]){
+        pc+= get_imm32(get_i_format(opcode, funct3, funct7))-4;
     }
 }
 void bne(){
-    if(beq[rs1]!=beq[rs2]){
-        pc+= get_imm32(get_i_format(opcode, func3, func7))-4;
+    if(breg[rs1]!=breg[rs2]){
+        pc+= get_imm32(get_i_format(opcode, funct3, funct7))-4;
     }
 }
 void bge(){
-    if(beq[rs1]>=beq[rs2]){
-        pc+= get_imm32(get_i_format(opcode, func3, func7))-4;
+    if(breg[rs1]>=breg[rs2]){
+        pc+= get_imm32(get_i_format(opcode, funct3, funct7))-4;
     }
 }
 void bgeu(){
-    if((uint32_t)beq[rs1]>=(uint32_t)beq[rs2]){
-        pc+= get_imm32(get_i_format(opcode, func3, func7))-4;
+    if((uint32_t)breg[rs1]>=(uint32_t)breg[rs2]){
+        pc+= get_imm32(get_i_format(opcode, funct3, funct7))-4;
     }
 }
 void blt(){
-     if(beq[rs1]<=beq[rs2]){
-        pc+= get_imm32(get_i_format(opcode, func3, func7))-4;
+     if(breg[rs1]<=breg[rs2]){
+        pc+= get_imm32(get_i_format(opcode, funct3, funct7))-4;
     }
 }
 void bltu(){
-     if((uint32_t)beq[rs1]<=(uint32_t)beq[rs2]){
-        pc+= get_imm32(get_i_format(opcode, func3, func7))-4;
+     if((uint32_t)breg[rs1]<=(uint32_t)breg[rs2]){
+        pc+= get_imm32(get_i_format(opcode, funct3, funct7))-4;
     }
 }
 void jal(){
@@ -362,10 +491,6 @@ void ecall(){
     }
 }
 
-//
-//Memória
-//
-int32_t mem[MEM_SIZE];
 
 //funções de acesso à memória
 int32_t lb(uint32_t address, int32_t kte){

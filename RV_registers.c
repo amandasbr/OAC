@@ -44,3 +44,27 @@ int32_t		imm12_i,	// constante 12 bits
             imm20_u,				// constante 20 bis mais significativos
             imm21,					// constante 21 bits
             imm32;                  // constante de 32 bits: o imediado da instrução
+
+char* instr_str[39];
+
+void build_dic() {
+    instr_str[I_add]	= "ADD";	instr_str[I_addi] = "ADDi";	instr_str[I_and] = "AND";
+    instr_str[I_andi]	= "ANDi";	instr_str[I_auipc] = "AUIPC";
+    instr_str[I_beq]	= "BEQ";	instr_str[I_bge] = "BGE";
+    instr_str[I_bgeu]	= "BGEU";	instr_str[I_blt] = "BLT";	instr_str[I_bltu] = "BLTU";
+    instr_str[I_bne]	= "BNE";
+    instr_str[I_jal]	= "JAL";	instr_str[I_jalr] = "JALR";
+    instr_str[I_lb]		= "LB";		instr_str[I_lbu] = "LBU";	instr_str[I_lh] = "LH";
+    instr_str[I_lhu]	= "LHU";	instr_str[I_lui] = "LUI";	instr_str[I_lw] = "LW";
+    instr_str[I_or]		= "OR";		instr_str[I_ori] = "ORi";
+    instr_str[I_sb]		= "SB";		instr_str[I_sh] = "SH";		instr_str[I_sll] = "SLL";
+    instr_str[I_slt]	= "SLT";	instr_str[I_slli] = "SLLi";
+    instr_str[I_slti]	= "SLTi";	instr_str[I_sltiu] = "SLTIU";
+    instr_str[I_sltu]	= "SLTU";	instr_str[I_srl] = "SRL";
+    instr_str[I_sra]	= "SRA";	instr_str[I_srli] = "SRLi";
+    instr_str[I_srai]	= "SRAi";	instr_str[I_sub] = "SUB";
+    instr_str[I_sw]		= "SW";		instr_str[I_xor] = "XOR";	instr_str[I_xori] = "XORi";
+    instr_str[I_ecall]  = "ECALL";  instr_str[I_nop]  = "NOP";
+}
+
+enum INSTRUCTIONS ins_code;
